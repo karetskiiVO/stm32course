@@ -1,4 +1,5 @@
-#include <stlib.h>
+#include <stm32lib.h>
+#include <stm32stepper.h>
 
 void systic_delay_ms (uint32_t ms) {
     SysTick->VAL  = 0;
@@ -10,7 +11,7 @@ void systic_delay_ms (uint32_t ms) {
 }
 
 int main (void) {
-    using namespace st;
+    using namespace st32;
 
     Stepper st(PB3, PD2, PC12, PC11);
 
