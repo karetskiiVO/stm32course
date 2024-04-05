@@ -4,17 +4,19 @@
 int main (void) {
     using namespace st32;
 
-    struct{uint32_t await, measured;} results[100];
+    Pin servoOut = PB6;
+    servoOut.setDigitalOutput();
 
-
-    for (uint32_t i = 0; i < 100; i++) {
-        results[i].await = (i + 1) * 10;
-        uint32_t start = timer::millis();
-        timer::delay_ms(results[i].await);
-        uint32_t finish = timer::millis();
-
-        results[i].measured = finish - start;
+    while (1) {
+        for (uint16_t i = 255 / 50; i < 2 * 255 / 50; i++) {
+            servoOut.PWMWrite(i);
+            timer::delay_ms(100);
+        }
+        for (uint16_t i = 2 * 255 / 50; i > 255 / 50; i--) {
+            servoOut.PWMWrite(i);
+            timer::delay_ms(200);
+        }
     }
-
+    
     return 0;
 }
