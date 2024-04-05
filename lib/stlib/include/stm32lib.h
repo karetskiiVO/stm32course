@@ -6,6 +6,9 @@
 #include <stm32core/stm32f051x8.h>
 #include <stm32core/system_stm32f0xx.h>
 
+#include <map>
+#include <cstring>
+
 extern "C" void SysTick_Handler (void); 
 
 namespace st32 {
@@ -36,6 +39,7 @@ public:
 class Pin {
     GPIO_TypeDef* GPIO;
     uint16_t num;
+    
 public:
     enum class SpeedType : uint16_t {
         LOW    = 0b00,
@@ -52,6 +56,7 @@ public:
 
     void digitalWrite (uint8_t bit) const;
     void setDigitalOutput (PullType pull = PullType::NO, SpeedType speed = SpeedType::LOW) const;
+    void PWMWrite (uint8_t val) const;
 };
 
 #if true
@@ -123,6 +128,40 @@ const Pin PD13{GPIOD, 13};
 const Pin PD14{GPIOD, 14};
 const Pin PD15{GPIOD, 15};
 #endif
+
+class ProgrammPWM {
+    struct PWMtasks {
+        Pin p;
+        uint8_t val;
+    };
+
+    static uint8_t size;
+    static PWMtasks* tasks;
+public:
+    static void addPin (const Pin& p, uint8_t val) {
+        removePin(p);
+        tasks[size++] = {p, val};
+    }
+
+    static void removePin (const Pin& p) {
+        uint8_t delta = 0;
+        for (uint8_t i = 0; i < size; i++) {
+            if (!memcmp(tasks + i, &p, sizeof(Pin))) {
+                delta++;
+            } else {
+                tasks[i - delta] = tasks[i]; 
+            }
+        }
+
+        size -= delta;
+    }
+
+    static void execute (uint8_t t) {
+        for (uint8_t i = 0; i < size; i++) {
+            tasks[i].p.digitalWrite(t <= tasks[i].val);
+        }
+    }
+};
 
 }
 

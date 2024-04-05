@@ -1,0 +1,24 @@
+{
+    "name"      : "stm32lib",
+    "version"   : "0.0.0",
+
+    "authors"   : {
+        "name"      : "Karetskii Vlad"
+    },
+
+    "export"    : {
+        "include": ["src/*",
+                    "include/stm32lib.h",
+                    "include/stm32stepper.h",
+                    "include/stm32interrupt.h"
+                ]
+    },
+
+    "frameworks": "*",
+    "platforms" : "*",
+    
+    "build"     : {
+        "libArchive": false,
+        "flags"     : "-std=c++20"
+    }
+}
