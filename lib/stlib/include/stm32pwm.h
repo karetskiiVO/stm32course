@@ -1,47 +1,52 @@
 #ifndef STM32PWM_h
 #define STM32PWM_h
 
-#include <cmath>
 #include <stm32lib.h>
-
-#include <vector>
-#include <algorithm>
+#include <stm32time.h>
 
 namespace st32 {
 
-class SoftwarePWM {
+class PWMdevice {
 public:
-    // clock frequency in Hz
-    const uint32_t BaseFreq = 8'000'000;
-private:
-    struct PWMtask {
-        Pin p;
-        uint32_t val;
-    };
-
-    float currFreq;
-
-    static void init () {
-        // setup counter mode
-        TIM1->CR1  = (0b0 << TIM_CR1_ARPE) | (0b00 << TIM_CR1_CMS_Pos) | (0b0 << TIM_CR1_DIR_Pos) | (TIM_CR1_CEN); 
-        
-        // setup interruption mode
-        TIM1->ARR  = UINT16_MAX;
-    }
-
-    static std::vector<PWMtask> newPins;
-    static std::vector<PWMtask> tasks;
-public:
-    SoftwarePWM  () = delete;
-
-    void setPwmFrequency (float f) {
-        uint16_t psc = std::round(BaseFreq / f);
-        currFreq = BaseFreq * 1.0 / psc;
-
-        TIM1->PSC = psc;
-    }
+    virtual void setFreq   (float f)                      = 0;
+    virtual void attachPin (const Pin& pin, uint32_t val) = 0; 
 };
 
+class SoftwareTIM2PWMdevice : public PWMdevice {
+    static uint32_t BaseFreq;
+    static uint16_t PWMresolution;
+
+    static SoftwareTIM2PWMdevice* exemplar;
+public:
+    SoftwareTIM2PWMdevice (uint32_t freq, uint16_t resolution) {
+        if (exemplar != nullptr) return;
+
+        BaseFreq = freq;
+        PWMresolution = resolution;
+        exemplar = this;
+        
+        // setup counter mode
+        TIM2->CR1  = (0b0 << TIM_CR1_ARPE_Pos) | (0b00 << TIM_CR1_CMS_Pos) | (0b0 << TIM_CR1_DIR_Pos) | (TIM_CR1_CEN); 
+        
+        // setup interruption mode
+        TIM2->ARR  = PWMresolution;
+    }
+
+    void setFreq (float f) {
+        
+    }
+    
+    void attachPin (const Pin& pin, uint32_t val) {
+
+    }
+
+    #undef TIM
+};
+
+SoftwareTIM2PWMdevice tim1PWM{8'000'000, 1024};
+
 }
+
+// extern "C" void TIM1_
 
 #endif // stm32pwm.h

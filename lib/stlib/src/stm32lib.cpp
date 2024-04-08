@@ -1,5 +1,6 @@
-#include <stm32lib.h>
 #include <climits>
+#include <stm32lib.h>
+#include <stm32time.h>
 
 using namespace st32;
 

@@ -1,4 +1,5 @@
-#include <stm32lib.h>
+#include <stm32pwm.h>
+#include <stm32time.h>
 
 using namespace st32;
 
@@ -25,3 +26,5 @@ void timer::delay_ms(uint16_t ms) {
 uint32_t timer::millis () {
     return milliseconds;
 }
+
+SoftwareTIM2PWMdevice* SoftwareTIM2PWMdevice::exemplar = nullptr;

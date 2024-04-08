@@ -1,4 +1,5 @@
 #include <stm32lib.h>
+#include <stm32time.h>
 #include <stm32stepper.h>
 
 int main (void) {
