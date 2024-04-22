@@ -1,0 +1,25 @@
+{
+    "name"      : "stm32lib",
+    "version"   : "0.0.0",
+
+    "authors"   : {
+        "name"      : "Karetskii Vlad"
+    },
+
+    "export"    : {
+        "include": ["src/*",
+                    "include/F05_RCC.h",
+                    "include/F05_TIM.h",
+                    "include/GPIO.h",
+                    "include/NVIC_Exti.h"
+                ]
+    },
+
+    "frameworks": "*",
+    "platforms" : "*",
+    
+    "build"     : {
+        "libArchive": false,
+        "flags"     : "-std=c++20"
+    }
+}

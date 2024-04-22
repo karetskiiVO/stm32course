@@ -16,22 +16,45 @@ class Pin {
     uint16_t num;
     
 public:
-    enum class SpeedType : uint16_t {
+    enum class SpeedType : uint32_t {
         LOW    = 0b00,
         MEDUIM = 0b01,
         HIGH   = 0b11,
     };
-    enum class PullType : uint16_t {
+    enum class PullType : uint32_t {
         NO       = 0b00,
         PULLUP   = 0b01,
         PULLDOWN = 0b11,
+    };
+    enum class PinMode : uint32_t {
+        INPUT     = 0b00,
+        OUTPUT    = 0b01,
+        ALTERNATE = 0b10,
+        ANALOG    = 0b11,
+    };
+    enum class AFType : uint32_t {
+        NO   = 0,
+        AF0  = 0,
+        AF1  = 1,
+        AF2  = 2,
+        AF3  = 3,
+        AF4  = 4,
+        AF5  = 5,
+        AF6  = 6,
+        AF7  = 7,
+        AF8  = 8,
+        AF9  = 9,
+        AF10 = 10,
+        AF11 = 11,
+        AF12 = 12,
+        AF14 = 14,
+        AF15 = 15,
     };
 
     Pin (GPIO_TypeDef* GPIO, uint16_t num);
 
     void digitalWrite (uint8_t bit) const;
-    void setDigitalOutput (PullType pull = PullType::NO, SpeedType speed = SpeedType::LOW) const;
-    void PWMWrite (uint8_t val) const;
+    void configure (PinMode mode, PullType pull, SpeedType speed, AFType af) const;
 };
 
 #if true

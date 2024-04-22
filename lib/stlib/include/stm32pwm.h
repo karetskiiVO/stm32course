@@ -1,5 +1,5 @@
-#ifndef STM32PWM_h
 #define STM32PWM_h
+#ifndef STM32PWM_h
 
 #include <stm32lib.h>
 #include <stm32time.h>

@@ -26,5 +26,3 @@ void timer::delay_ms(uint16_t ms) {
 uint32_t timer::millis () {
     return milliseconds;
 }
-
-SoftwareTIM2PWMdevice* SoftwareTIM2PWMdevice::exemplar = nullptr;

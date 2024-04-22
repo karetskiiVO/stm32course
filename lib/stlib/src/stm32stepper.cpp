@@ -4,10 +4,10 @@ using namespace st32;
 
 Stepper::Stepper (const Pin& in1, const Pin& in2, const Pin& in3, const Pin& in4, Direction dir)
     : in1(in1), in2(in2), in3(in3), in4(in4), currentPhase(0), currentDir(dir) {    
-    in1.setDigitalOutput();
-    in2.setDigitalOutput();
-    in3.setDigitalOutput();
-    in4.setDigitalOutput();
+    // in1.setDigitalOutput();
+    // in2.setDigitalOutput();
+    // in3.setDigitalOutput();
+    // in4.setDigitalOutput();
 }
 
 void Stepper::writePhase (uint8_t phmsk) {

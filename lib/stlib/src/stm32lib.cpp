@@ -43,26 +43,31 @@ namespace {
 
 Pin::Pin (GPIO_TypeDef* GPIO, uint16_t num) : GPIO(GPIO), num(num) {}
 
-void Pin::setDigitalOutput (PullType pull, SpeedType speed) const {
+void Pin::configure (PinMode mode, PullType pull, SpeedType speed, AFType af) const {
     /* Настраиваем режим работы порта */
-    GPIO->MODER |= (uint16_t)1 << (num << (uint16_t)1);
+    GPIO->MODER &= ~(uint32_t(0b11) << (num << uint32_t(1)));
+    GPIO->MODER |= uint32_t(mode) << (num << uint32_t(1));
 
     /* Настраиваем Output type в режим Push-Pull */
-    GPIO->OTYPER &= ~((uint16_t)1 << num);
+    GPIO->OTYPER &= ~(uint32_t(1) << num);
 
     /* устанавливаем подтяжку*/
-    GPIO->PUPDR &= ~((uint16_t)0b11 << (num << (uint16_t)1));
-    GPIO->PUPDR |= (uint16_t)static_cast<uint16_t>(pull) << (num << (uint16_t)1);
+    GPIO->PUPDR &= ~(uint32_t(0b11) << (num << uint32_t(1)));
+    GPIO->PUPDR |= uint32_t(pull) << (num << uint32_t(1));
 
     /* Настраиваем скорость работы порта в spped */
-    GPIO->OSPEEDR &= ~((uint16_t)0b11 << (num << (uint16_t)1));
-    GPIO->OSPEEDR |= (uint16_t)static_cast<uint16_t>(speed) << (num << (uint16_t)1);
+    GPIO->OSPEEDR &= ~(uint32_t(0b11) << (num << uint32_t(1)));
+    GPIO->OSPEEDR |= uint32_t(speed) << (num << uint32_t(1));
+
+    /* устанавливаем альтернативную функцию */
+    GPIO->AFR[num / 8] &= ~(uint32_t(0x0F) << ((num % uint32_t(8)) * uint32_t(4)));
+    GPIO->AFR[num / 8] |= uint32_t(af) << ((num % uint32_t(8)) * uint32_t(4));
 }
 
 void Pin::digitalWrite (uint8_t bit) const {
     if (bit) {
-        GPIO->ODR |=  ((uint16_t)1 << num);
+        GPIO->ODR |=  (uint32_t(1) << num);
     } else {
-        GPIO->ODR &= ~((uint16_t)1 << num);
+        GPIO->ODR &= ~(uint32_t(1) << num);
     }
 }
