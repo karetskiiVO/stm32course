@@ -53,8 +53,13 @@ public:
 
     Pin (GPIO_TypeDef* GPIO, uint16_t num);
 
+    static const Pin Unavailable;
+
     void digitalWrite (uint8_t bit) const;
     void configure (PinMode mode, PullType pull, SpeedType speed, AFType af) const;
+
+    bool operator== (const Pin& other) const;
+    bool operator!= (const Pin& other) const;
 };
 
 #if true

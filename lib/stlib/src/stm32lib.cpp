@@ -2,7 +2,7 @@
 #include <stm32lib.h>
 #include <stm32time.h>
 
-using namespace st32;
+namespace st32 {
 
 namespace {
     class StlibInit {
@@ -43,6 +43,8 @@ namespace {
 
 Pin::Pin (GPIO_TypeDef* GPIO, uint16_t num) : GPIO(GPIO), num(num) {}
 
+const Pin Pin::Unavailable = Pin{nullptr, UINT16_MAX};
+
 void Pin::configure (PinMode mode, PullType pull, SpeedType speed, AFType af) const {
     /* Настраиваем режим работы порта */
     GPIO->MODER &= ~(uint32_t(0b11) << (num << uint32_t(1)));
@@ -70,4 +72,14 @@ void Pin::digitalWrite (uint8_t bit) const {
     } else {
         GPIO->ODR &= ~(uint32_t(1) << num);
     }
+}
+
+bool Pin::operator== (const Pin& other) const {
+    return GPIO == other.GPIO && num == other.num;
+}
+
+bool Pin::operator!= (const Pin& other) const {
+    return !(*this == other);
+}
+
 }

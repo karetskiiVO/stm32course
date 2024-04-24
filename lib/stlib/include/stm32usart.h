@@ -5,85 +5,47 @@ extern "C" void USART1_IRQHandler ();
 extern "C" void USART2_IRQHandler ();
 
 #include <stm32lib.h>
+#include <iobuffer.h>
 
 namespace st32 {
-const uint32_t APBClock = 8'000'000; // implement
+const uint32_t APBClock = 8'000'000;
 
-#define IO_Buffer_Size 16
-
-template <typename T, uint32_t Capacity>
-class FIFObufer {
-    uint32_t size_;
-    uint32_t fst, lst;
-
-    T storage[Capacity];
-public:
-    FIFObufer () : size_(0), fst(0), lst(0) {}
-
-    void clear () {
-        size_ = 0;
-        fst   = 0;
-        lst   = 0;
-    }
-
-    void push (T elem) {
-        storage[lst] = elem;
-        if (size_ == Capacity) {
-            fst = (fst + 1) % Capacity;
-        } else {
-            size_++;
-        }
-        lst = (lst + 1) % Capacity;
-    }
-
-    T front () const {
-        return storage[fst];
-    }
-
-    uint32_t size () const {
-        return size_;
-    }
-
-    void pop () {
-        if (size_ == 0) return;
-        fst = (fst + 1) % Capacity;
-        size_--;
-    }
-};
+void enableUSART1 (const Pin& rx, const Pin& tx, uint32_t baudRate);
+void enableUSART2 (const Pin& rx, const Pin& tx, uint32_t baudRate);
 
 class USARTDevice {
-public:
-    enum class USARTMode {
-        TRANSMIT,
-        TRANSMIT_REMOTE,
-        RECIVE,
-        RECIVE_REMOTE,
-    };
+
 private:
-    uint32_t       RCC_APB1ENR_USARTxEN;
     USART_TypeDef* USARTx;
-    USARTMode      mode;
     uint32_t       baudRate;
     IRQn_Type      usartIRQ;
-    Pin            attachedPin;
 
-    bool readyToWork = true;
+    Pin            rx = Pin::Unavailable;
+    Pin            tx = Pin::Unavailable;
 
-    FIFObufer<uint8_t, IO_Buffer_Size> ioBuffer;
+    bool readyToTransmit = true;
+    bool readyToRecive   = true;
 
     const uint8_t* remoteBegin = nullptr;
     const uint8_t* remoteEnd   = nullptr;
 
-    USARTDevice (
-        USART_TypeDef*     USARTx,
-        volatile uint32_t& APB,
-        uint32_t           RCC_APB1ENR_USARTxEN, 
-        IRQn_Type          usartIRQ,
-        uint32_t           baudRate,
-        const Pin&         attachedPin
-    );
+    struct USARTTask {
+        enum class Type : uint8_t {
+            SINGLE,
+            REMOTE,
+        };
 
-    void tick ();
+        Type type;
+        
+        const uint8_t* begin;
+        const uint8_t* end;
+    };
+
+    FIFObuffer<USARTTask, 128> outbuffer;
+
+    USARTDevice (USART_TypeDef* USARTx, IRQn_Type usartIRQ);
+
+    void tick (uint32_t flags);
 public:
     ~USARTDevice() = default;
 
@@ -93,12 +55,10 @@ public:
     USARTDevice& operator= (const USARTDevice&) = delete;
 
     void setBaudRate (uint32_t baudRate); 
-    void setMode (USARTMode mode);
+    void attachPinsToUSART (const Pin& rx, const Pin& tx);
 
     void send (uint8_t byte);
-    void send (const uint8_t* begin, const uint8_t* end);
-
-    void sendRemote (const uint8_t* begin, const uint8_t* end);
+    void send (const uint8_t* begin, const uint8_t* end); 
 
     static USARTDevice usart1;
     static USARTDevice usart2;
