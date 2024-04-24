@@ -89,7 +89,7 @@ void USARTDevice::tick () {
     case USARTMode::TRANSMIT_REMOTE:
         while(!(USARTx->ISR & USART_ISR_TXE)); 
         
-        if (ioBuffer.size() == 0) {
+        if (remoteBegin == remoteEnd) {
             readyToWork = true;
             return;
         }
@@ -112,7 +112,7 @@ void USARTDevice::send (uint8_t byte) {
     }
 }
 
-void USARTDevice::send (uint8_t* begin, uint8_t* end) {
+void USARTDevice::send (const uint8_t* begin, const uint8_t* end) {
     if (mode != USARTMode::TRANSMIT) return;
     for (; begin < end; begin++) {
         ioBuffer.push(*begin);
@@ -124,7 +124,7 @@ void USARTDevice::send (uint8_t* begin, uint8_t* end) {
     }
 }
 
-void USARTDevice::sendRemote (uint8_t* begin, uint8_t* end) {
+void USARTDevice::sendRemote (const uint8_t* begin, const uint8_t* end) {
     if (mode != USARTMode::TRANSMIT_REMOTE) return;
     // create remote queue
 

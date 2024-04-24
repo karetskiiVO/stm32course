@@ -71,8 +71,8 @@ private:
 
     FIFObufer<uint8_t, IO_Buffer_Size> ioBuffer;
 
-    uint8_t* remoteBegin = nullptr;
-    uint8_t* remoteEnd   = nullptr;
+    const uint8_t* remoteBegin = nullptr;
+    const uint8_t* remoteEnd   = nullptr;
 
     USARTDevice (
         USART_TypeDef*     USARTx,
@@ -96,9 +96,9 @@ public:
     void setMode (USARTMode mode);
 
     void send (uint8_t byte);
-    void send (uint8_t* begin, uint8_t* end);
+    void send (const uint8_t* begin, const uint8_t* end);
 
-    void sendRemote (uint8_t* begin, uint8_t* end);
+    void sendRemote (const uint8_t* begin, const uint8_t* end);
 
     static USARTDevice usart1;
     static USARTDevice usart2;
