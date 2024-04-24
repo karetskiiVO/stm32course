@@ -29,7 +29,7 @@ public:
     void push (T elem) {
         storage[lst] = elem;
         if (size_ == Capacity) {
-            fst = (fst + 1) & Capacity;
+            fst = (fst + 1) % Capacity;
         } else {
             size_++;
         }
@@ -66,6 +66,8 @@ private:
     uint32_t       baudRate;
     IRQn_Type      usartIRQ;
     Pin            attachedPin;
+
+    bool readyToWork = true;
 
     FIFObufer<uint8_t, IO_Buffer_Size> ioBuffer;
 

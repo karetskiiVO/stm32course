@@ -11,7 +11,7 @@ namespace st32 {
 
 // остаются вопросы относительно шины
 USARTDevice USARTDevice::usart1 = USARTDevice(
-    USART1, RCC->APB2ENR, RCC_APB2ENR_USART1EN, IRQn_Type::USART1_IRQn, 9600, PB7
+    USART1, RCC->APB2ENR, RCC_APB2ENR_USART1EN, IRQn_Type::USART1_IRQn, 9600, PB6
 );
 USARTDevice USARTDevice::usart2 = USARTDevice(
     USART2, RCC->APB1ENR, RCC_APB1ENR_USART2EN, IRQn_Type::USART2_IRQn, 9600, PA2
@@ -35,17 +35,13 @@ USARTDevice::USARTDevice (
     setBaudRate(baudRate); 
 }
 
-/*
-    ВНИМАНИЕ
-    Здесь могут быть другие AF
-*/
 void USARTDevice::setBaudRate (uint32_t baudRate) {
     NVIC_DisableIRQ(usartIRQ);
     USARTx->BRR   = APBClock / baudRate;
     switch (mode) {
     case USARTMode::TRANSMIT:
     case USARTMode::TRANSMIT_REMOTE:
-        attachedPin.configure(Pin::PinMode::OUTPUT, Pin::PullType::NO, Pin::SpeedType::LOW, Pin::AFType::AF1);
+        attachedPin.configure(Pin::PinMode::ALTERNATE, Pin::PullType::NO, Pin::SpeedType::LOW, Pin::AFType::AF0);
 
         USARTx->CR1 |= USART_CR1_TE;  
         USARTx->CR1 |= USART_CR1_UE; 
@@ -54,9 +50,9 @@ void USARTDevice::setBaudRate (uint32_t baudRate) {
     case USARTMode::RECIVE_REMOTE:
         attachedPin.configure(Pin::PinMode::INPUT, Pin::PullType::NO, Pin::SpeedType::LOW, Pin::AFType::AF0);
 
-        USART1->CR1 |= USART_CR1_RXNEIE;
-        USART1->CR1 |= USART_CR1_RE;  
-        USART1->CR1 |= USART_CR1_UE; 
+        USARTx->CR1 |= USART_CR1_RXNEIE;
+        USARTx->CR1 |= USART_CR1_RE;  
+        USARTx->CR1 |= USART_CR1_UE; 
         break;
     }
     NVIC_EnableIRQ(usartIRQ);
@@ -75,9 +71,13 @@ void USARTDevice::tick () {
         // implement
         break;
     case USARTMode::TRANSMIT:
-        while(!(USARTx->ISR & USART_ISR_TXE)); 
+        while (!(USARTx->ISR & USART_ISR_TXE)); 
         
-        if (ioBuffer.size() == 0) return;
+        if (ioBuffer.size() == 0) {
+            readyToWork = true;
+            return;
+        }
+
         USARTx->TDR  = ioBuffer.front(); 
         USARTx->CR1 |= USART_CR1_TXEIE;
         ioBuffer.pop();
@@ -89,43 +89,52 @@ void USARTDevice::tick () {
     case USARTMode::TRANSMIT_REMOTE:
         while(!(USARTx->ISR & USART_ISR_TXE)); 
         
-        if (remoteBegin == remoteEnd) return;
+        if (ioBuffer.size() == 0) {
+            readyToWork = true;
+            return;
+        }
+
         USARTx->TDR  = *remoteBegin;
         USARTx->CR1 |= USART_CR1_TXEIE;
         remoteBegin++;
 
         break;
     }
-
 }
 
 void USARTDevice::send (uint8_t byte) {
     if (mode != USARTMode::TRANSMIT) return;
-    bool needStart = (ioBuffer.size() == 0);
     ioBuffer.push(byte);
 
-    if (needStart) tick();
+    if (readyToWork) {
+        readyToWork = false;
+        tick();
+    }
 }
 
 void USARTDevice::send (uint8_t* begin, uint8_t* end) {
     if (mode != USARTMode::TRANSMIT) return;
-    bool needStart = (ioBuffer.size() == 0);
     for (; begin < end; begin++) {
         ioBuffer.push(*begin);
     }
 
-    if (needStart) tick();
+    if (readyToWork) {
+        readyToWork = false;
+        tick();
+    }
 }
 
 void USARTDevice::sendRemote (uint8_t* begin, uint8_t* end) {
     if (mode != USARTMode::TRANSMIT_REMOTE) return;
-    bool needStart = (remoteBegin == remoteEnd);
     // create remote queue
 
     remoteBegin = begin;
     remoteEnd   = end;
 
-    if (needStart) tick();
+    if (readyToWork) {
+        readyToWork = false;
+        tick();
+    }
 }
 
 }

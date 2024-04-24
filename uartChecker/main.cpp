@@ -6,11 +6,12 @@
 // PA2 - usart2 - recive 
 int main (void) {
     st32::USARTDevice::usart1.setMode(st32::USARTDevice::USARTMode::TRANSMIT);
-    st32::USARTDevice::usart2.setMode(st32::USARTDevice::USARTMode::RECIVE);
-    
+    // st32::USARTDevice::usart2.setMode(st32::USARTDevice::USARTMode::RECIVE);
+
+    for (uint8_t ch = 'a'; ch < 'a' + 4; ch++) {
+        st32::USARTDevice::usart1.send(ch);
+    }
     while (true) {
-        st32::USARTDevice::usart1.send('a');
-        st32::timer::delay_ms(500);
     }
 
     return 0;
