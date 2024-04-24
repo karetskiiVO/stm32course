@@ -62,15 +62,15 @@ void USARTDevice::setBaudRate (uint32_t baudRate) {
     USARTx->BRR   = APBClock / baudRate;
 
     if (tx != Pin::Unavailable) {
-        USARTx->CR1 |= USART_CR1_TE; 
+        USARTx->CR1 |= USART_CR1_TE;
+        USARTx->CR1 |= USART_CR1_UE;
     }
 
     if (rx != Pin::Unavailable) {
         USARTx->CR1 |= USART_CR1_RXNEIE;
+        USARTx->CR1 |= USART_CR1_RE;
         USARTx->CR1 |= USART_CR1_UE;
     }
-
-    USARTx->CR1 |= USART_CR1_UE;
 
     NVIC_EnableIRQ(usartIRQ);
 }
@@ -78,29 +78,33 @@ void USARTDevice::setBaudRate (uint32_t baudRate) {
 void USARTDevice::tick (uint32_t flags) {
     NVIC_DisableIRQ(usartIRQ);
     
-    if (!(flags & USART_ISR_TXE)) {
-        switch (outbuffer.front().type) {
-        case USARTDevice::USARTTask::Type::SINGLE:
-            USARTx->TDR  = reinterpret_cast<const uint32_t>(outbuffer.front().begin); 
-            USARTx->CR1 |= USART_CR1_TXEIE;
-            outbuffer.pop();
-
-            break;
-        case USARTDevice::USARTTask::Type::REMOTE:
-            USARTx->TDR  = *outbuffer.front().begin;
-            USARTx->CR1 |= USART_CR1_TXEIE;
-            outbuffer.front().begin++;
-
-            if (outbuffer.front().begin == outbuffer.front().end) outbuffer.pop();
-            break;
-        }
-
+    if (flags & USART_ISR_TXE) {
         if (outbuffer.size() == 0) {
-            readyToRecive = true;
+            readyToTransmit = true;
+        } else {
+            switch (outbuffer.front().type) {
+            case USARTDevice::USARTTask::Type::SINGLE:
+                USARTx->TDR  = reinterpret_cast<const uint32_t>(outbuffer.front().begin); 
+                USARTx->CR1 |= USART_CR1_TXEIE;
+
+                outbuffer.pop();
+
+                break;
+            case USARTDevice::USARTTask::Type::REMOTE:
+                USARTx->TDR  = *outbuffer.front().begin;
+                USARTx->CR1 |= USART_CR1_TXEIE;
+
+                outbuffer.front().begin++;
+
+                if (outbuffer.front().begin == outbuffer.front().end) {
+                    outbuffer.pop();
+                }
+                break;
+            }
         }
     }
-
-    if (!(flags & USART_ISR_RXNE)) {
+    
+    if (flags & USART_ISR_RXNE) {
 
     }
 
@@ -110,14 +114,14 @@ void USARTDevice::tick (uint32_t flags) {
 void USARTDevice::send (uint8_t byte) {
     outbuffer.push({USARTDevice::USARTTask::Type::SINGLE, reinterpret_cast<uint8_t*>(byte), nullptr});
     if (readyToTransmit) {
-        readyToTransmit = true;
+        readyToTransmit = false;
         tick(USART_ISR_TXE);
     }
 }
 void USARTDevice::send (const uint8_t* begin, const uint8_t* end) {
     outbuffer.push({USARTDevice::USARTTask::Type::REMOTE, begin, end});
     if (readyToTransmit) {
-        readyToTransmit = true;
+        readyToTransmit = false;
         tick(USART_ISR_TXE);
     }
 }
