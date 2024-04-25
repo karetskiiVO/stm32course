@@ -81,8 +81,6 @@ void USARTDevice::tick (uint32_t flags) {
 
     Led.digitalWrite(u);
     u = !u;
-    inbuffer.push(USARTx->RDR);
-    (void)USARTx->RDR;
     
     NVIC_DisableIRQ(usartIRQ);
     
@@ -113,6 +111,8 @@ void USARTDevice::tick (uint32_t flags) {
     }
     
     if (flags & USART_ISR_RXNE) {
+        inbuffer.push(USARTx->RDR);
+        (void)USARTx->RDR;
         USARTx->CR1 |= USART_CR1_RXNEIE;
     }
 
