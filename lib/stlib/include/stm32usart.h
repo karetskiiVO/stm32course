@@ -13,9 +13,10 @@ const uint32_t APBClock = 8'000'000;
 void enableUSART1 (const Pin& rx, const Pin& tx, uint32_t baudRate);
 void enableUSART2 (const Pin& rx, const Pin& tx, uint32_t baudRate);
 
-class USARTDevice {
+// Empty recive
+const uint32_t EOR = -1;
 
-private:
+class USARTDevice {
     USART_TypeDef* USARTx;
     uint32_t       baudRate;
     IRQn_Type      usartIRQ;
@@ -25,9 +26,6 @@ private:
 
     bool readyToTransmit = true;
     bool readyToRecive   = true;
-
-    const uint8_t* remoteBegin = nullptr;
-    const uint8_t* remoteEnd   = nullptr;
 
     struct USARTTask {
         enum class Type : uint8_t {
@@ -41,7 +39,8 @@ private:
         const uint8_t* end;
     };
 
-    FIFObuffer<USARTTask, 128> outbuffer;
+    FIFObuffer<USARTTask, 64> outbuffer;
+    FIFObuffer<uint8_t, 128> inbuffer;
 
     USARTDevice (USART_TypeDef* USARTx, IRQn_Type usartIRQ);
 
@@ -59,6 +58,9 @@ public:
 
     void send (uint8_t byte);
     void send (const uint8_t* begin, const uint8_t* end); 
+
+    bool readyToRecive () const;
+    uint32_t recive ();
 
     static USARTDevice usart1;
     static USARTDevice usart2;

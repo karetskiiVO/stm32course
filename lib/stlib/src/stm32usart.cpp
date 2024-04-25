@@ -105,7 +105,7 @@ void USARTDevice::tick (uint32_t flags) {
     }
     
     if (flags & USART_ISR_RXNE) {
-
+        inbuffer.push(USARTx->RDR);
     }
 
     NVIC_EnableIRQ(usartIRQ);
@@ -118,12 +118,25 @@ void USARTDevice::send (uint8_t byte) {
         tick(USART_ISR_TXE);
     }
 }
+
 void USARTDevice::send (const uint8_t* begin, const uint8_t* end) {
     outbuffer.push({USARTDevice::USARTTask::Type::REMOTE, begin, end});
     if (readyToTransmit) {
         readyToTransmit = false;
         tick(USART_ISR_TXE);
     }
+}
+
+bool USARTDevice::readyToRecive () const {
+    return inbuffer.size() != 0;
+}
+
+uint32_t USARTDevice::recive () {
+    if (inbuffer.size() == 0) return EOR;
+
+    uint8_t res = inbuffer.front();
+    inbuffer.pop();
+    return res;
 }
 
 }

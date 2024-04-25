@@ -67,10 +67,10 @@ void Pin::configure (PinMode mode, PullType pull, SpeedType speed, AFType af) co
 }
 
 void Pin::digitalWrite (uint8_t bit) const {
-    if (bit) {
-        GPIO->ODR |=  (uint32_t(1) << num);
+    if (bit != 0) {
+        GPIO->BSRR = uint32_t(1) <<  uint32_t(num);
     } else {
-        GPIO->ODR &= ~(uint32_t(1) << num);
+        GPIO->BSRR = uint32_t(1) <<  uint32_t(num) << uint32_t(16);
     }
 }
 
