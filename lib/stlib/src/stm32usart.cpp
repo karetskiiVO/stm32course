@@ -76,6 +76,14 @@ void USARTDevice::setBaudRate (uint32_t baudRate) {
 }
 
 void USARTDevice::tick (uint32_t flags) {
+    auto& Led = st32::PC8;
+    static uint8_t u = 1;
+
+    Led.digitalWrite(u);
+    u = !u;
+    inbuffer.push(USARTx->RDR);
+    (void)USARTx->RDR;
+    
     NVIC_DisableIRQ(usartIRQ);
     
     if (flags & USART_ISR_TXE) {
@@ -105,7 +113,7 @@ void USARTDevice::tick (uint32_t flags) {
     }
     
     if (flags & USART_ISR_RXNE) {
-        inbuffer.push(USARTx->RDR);
+        USARTx->CR1 |= USART_CR1_RXNEIE;
     }
 
     NVIC_EnableIRQ(usartIRQ);
@@ -127,11 +135,25 @@ void USARTDevice::send (const uint8_t* begin, const uint8_t* end) {
     }
 }
 
-bool USARTDevice::readyToRecive () const {
-    return inbuffer.size() != 0;
+void USARTDevice::send (const void* begin, const void* end) {
+    send(reinterpret_cast<const uint8_t*>(begin), reinterpret_cast<const uint8_t*>(end));
 }
 
-uint32_t USARTDevice::recive () {
+bool USARTDevice::transmitBufferEmpty () const {
+    return outbuffer.size() == 0;
+}
+
+bool USARTDevice::reciveBufferEmpty () const {
+    return inbuffer.size() == 0;
+}
+
+uint32_t USARTDevice::peek () const {
+    if (inbuffer.size() == 0) return EOR;
+
+    return inbuffer.front();
+}
+
+uint32_t USARTDevice::get () {
     if (inbuffer.size() == 0) return EOR;
 
     uint8_t res = inbuffer.front();

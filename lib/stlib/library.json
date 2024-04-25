@@ -9,7 +9,7 @@
     "export"    : {
         "include": ["src/*",
                     "include/stm32lib.h",
-                    "include/stm32uart.h",
+                    "include/stm32usart.h",
                     "include/stm32stepper.h",
                     "include/stm32interrupt.h"
                 ]

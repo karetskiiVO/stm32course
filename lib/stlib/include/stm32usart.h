@@ -25,7 +25,6 @@ class USARTDevice {
     Pin            tx = Pin::Unavailable;
 
     bool readyToTransmit = true;
-    bool readyToRecive   = true;
 
     struct USARTTask {
         enum class Type : uint8_t {
@@ -57,10 +56,14 @@ public:
     void attachPinsToUSART (const Pin& rx, const Pin& tx);
 
     void send (uint8_t byte);
+    void send (const void* begin, const void* end); 
     void send (const uint8_t* begin, const uint8_t* end); 
 
-    bool readyToRecive () const;
-    uint32_t recive ();
+    bool transmitBufferEmpty () const;
+    bool reciveBufferEmpty () const;
+
+    uint32_t peek () const;
+    uint32_t get ();
 
     static USARTDevice usart1;
     static USARTDevice usart2;
