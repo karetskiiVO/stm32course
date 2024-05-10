@@ -6,65 +6,99 @@
 #include <cmath>
 
 /**
- * (c) Karetskii Vlad & Alisa Viktorove, MIPT 2024
- * 
- * Задача 2: сделать частотомер на таймере(максимальная частота 25.5 kHz), результат измерения 
- * отсылается по USART на компьютер в формате строки.
  *
-
-/**
- * PB0  -> TIM3CH3
+ * Сделать частотомер на таймере(максимальная частота 25.5 kHz), результат измерения 
+ * отсылается по USART на компьютер в формате строки.
  * 
- * PA9  -> USART1TX
- * PA10 -> USART1RX  
+ * Распиновка
+ * 
+ * PB4  -> TIM3CH1  -- ввход сигнала
+ * PA9  -> USART1TX -- выход на USART
+ * 
+ * (c) Karetskii Vlad & Alisa Viktorova, MIPT 2024
+ * 
  */
 
-const uint32_t PWMOUTpin  = 0;
-const uint32_t USARTINpin = 9;
-const uint32_t APBFreq    = 8'000'000;
+#define OUTPUT_BUFFER_SIZE 32
 
-enum class PinMode : uint32_t { 
-    INPUT = 0b00, 
-    OUTPUT = 0b01, 
+const uint32_t FreqInPin   = 4;
+const uint32_t UsartOutPin = 9;
+const uint32_t ApbFreq     = 8'000'000;
+
+enum class PinMode   : uint32_t { 
+    INPUT       = 0b00, 
+    OUTPUT      = 0b01, 
     ALTERNATIVE = 0b10, 
-    ANALOG = 0b11, 
+    ANALOG      = 0b11, 
 }; 
 enum class SpeedMode : uint32_t { 
-    LOW = 0b00, 
-    FAST = 0b01, 
-    VERYFAST = 0b10, 
+    LOW         = 0b00, 
+    FAST        = 0b01, 
+    VERYFAST    = 0b10, 
 }; 
-enum class PullMode : uint32_t { 
-    NOPULL = 0b00, 
-    PULLUP = 0b01, 
-    PULLDOWN = 0b10, 
+enum class PullMode  : uint32_t { 
+    NOPULL      = 0b00, 
+    PULLUP      = 0b01, 
+    PULLDOWN    = 0b10, 
 }; 
  
 void configurePin ( 
     GPIO_TypeDef* GPIOx, uint32_t pin, PinMode pinMode, 
     SpeedMode speedMode, PullMode pullMode, uint32_t alternativeFunc);
+
 void USART1TransmitInit (uint32_t baudRate);
-void TIM3CH3FreqInputInit ();
+void USART1SendString (const char* str);
 
-void TIM6Init () {
-    RCC->APB1ENR |= RCC_APB1ENR_TIM6EN; // включаем таймер 6
+void TIM3CH1FreqInPinputInit ();
 
-    TIM6->PSC = 0;                      // таймер 6 на 8'000'000 Гц
-    TIM6->ARR = UINT16_MAX;            
+void TIM6Init ();
+
+void SysTickInit ();
+void delayms (uint32_t ms);
+
+volatile uint32_t measured = 0;
+
+int main (void) {
+    USART1TransmitInit(9600); 
+    TIM6Init();
+    SysTickInit();
+    TIM3CH1FreqInPinputInit();
+
+    NVIC_DisableIRQ(USART1_IRQn);               // выключаем прерывания USART, чтою ничего не ломать
+
+    RCC->AHBENR |= RCC_AHBENR_GPIOAEN;          // включаем тактирование GPIOA
+    RCC->AHBENR |= RCC_AHBENR_GPIOBEN;          // включаем тактирование GPIOB
+    /* 
+    ** Кофигурируем пины следующим образом
+    **
+    ** PB4  -> TIM3CH1
+    ** PA9  -> USART1TX
+    */
+    configurePin(GPIOB, FreqInPin,   PinMode::ALTERNATIVE, SpeedMode::LOW, PullMode::NOPULL, 1);
+    configurePin(GPIOA, UsartOutPin, PinMode::ALTERNATIVE, SpeedMode::LOW, PullMode::NOPULL, 1);
     
-    TIM6->CR1 |= TIM_CR1_CEN;           // counter enable
-    while (!(TIM6->SR & TIM_SR_UIF)) {} // update interupt flag
+    char answer[OUTPUT_BUFFER_SIZE];            // содаем буфер в который будем записывать ответ
+
+    while (1) {
+        delayms(1000);                          // ждем одну секунду, при этом крутимся в прерывании, считая ответ
+
+        sprintf(answer, "%ld Hz\n", measured);
+        USART1SendString(answer);               // формируем и отправляем ответ
+    }
+    
+    return 0;
 }
 
-uint16_t chunk = 60000;
-
 void SysTickInit () {
+    const uint16_t chunk = 60000;
     SysTick->LOAD = chunk - 1;
-    SysTick->VAL  = chunk - 1; 
+    SysTick->VAL  = chunk - 1;
     SysTick->CTRL |= SysTick_CTRL_ENABLE_Msk;
 }
 
-void delay_ms (uint32_t ms) {
+void delayms (uint32_t ms) {
+    const uint16_t chunk = 60000;
+
     ms *= 1000;
 
     for (; ms > chunk; ms -= chunk) {
@@ -78,90 +112,59 @@ void delay_ms (uint32_t ms) {
     while (!(SysTick->CTRL & SysTick_CTRL_COUNTFLAG_Msk)) {}
 }
 
-float measured = 0;
+void TIM6Init () {
+    RCC->APB1ENR |= RCC_APB1ENR_TIM6EN;         // включаем TIM6
 
-void USART1SendString (const char* str);
-
-int main (void) {
-    USART1TransmitInit(9600); // включаем usart
-    TIM6Init();
-    SysTickInit();
-    TIM3CH3FreqInputInit();         // включаем pwm на tim3ch3
-    NVIC_DisableIRQ(USART1_IRQn);
-
-    RCC->AHBENR |= RCC_AHBENR_GPIOAEN; // включаем тактирование GPIOA
-    RCC->AHBENR |= RCC_AHBENR_GPIOBEN; // включаес тактирование GPIOB
-    RCC->AHBENR |= RCC_AHBENR_GPIOCEN; // включаес тактирование GPIOB
-
-    configurePin(GPIOB, PWMOUTpin,  PinMode::ALTERNATIVE, SpeedMode::LOW, PullMode::NOPULL, 1);
-    configurePin(GPIOA, USARTINpin, PinMode::ALTERNATIVE, SpeedMode::LOW, PullMode::NOPULL, 1);
-
-    configurePin(GPIOC, 8, PinMode::OUTPUT, SpeedMode::LOW, PullMode::NOPULL, 0);
+    TIM6->PSC = 8 - 1;                          // ставем предделитель 8 на TIM6
+    TIM6->ARR = UINT16_MAX;                     // устанавливаем максимальны диапазон подсчета времени
     
-    char answer[32];
-
-    uint8_t mode = 1;
-    while (1) {
-        delay_ms(1000);
-        
-        GPIOC->ODR &= ~(1 << 8);
-        GPIOC->ODR |= mode << 8;
-        mode = !mode;
-
-        sprintf(answer, "%d Hz\n", (uint32_t)measured);
-        USART1SendString(answer);
-    }
-    
-    return 0;
+    TIM6->CR1 |= TIM_CR1_CEN;                   // включаем отсчет на TIM6
+    while (!(TIM6->SR & TIM_SR_UIF)) {}         // ждем пока таймер обновится и примет новые настройки
 }
 
 void USART1TransmitInit (uint32_t baudRate) { 
-    RCC->APB2ENR |= RCC_APB2ENR_USART1EN; 
+    RCC->APB2ENR |= RCC_APB2ENR_USART1EN;       // включаем тактирование USART1
  
-    NVIC_DisableIRQ(USART1_IRQn); //выключаем на время настройки 
+    NVIC_DisableIRQ(USART1_IRQn);               // выключаем на время настройки, для избежаний deadlock'ов
     
-    USART1->BRR = APBFreq / baudRate; // установили скорость прием-передачи в сек [бод]
-    USART1->CR1 |= USART_CR1_TE;        // включаем прием
-    USART1->CR1 |= USART_CR1_UE;        // включаем usart
+    USART1->BRR = ApbFreq / baudRate;           // установили скорость прием-передачи в сек [бод]
+    USART1->CR1 |= USART_CR1_TE;                // включаем отправку
+    USART1->CR1 |= USART_CR1_UE;                // включаем USART
  
-    NVIC_EnableIRQ(USART1_IRQn); 
+    NVIC_EnableIRQ(USART1_IRQn);                // возвращаем прерывания
 }
 
 void USART1SendString (const char* str) {
-    if (str == nullptr) return;
+    if (str == nullptr) return;                 // проверяем на валидность указатель на строку
 
-    for (; *str != '\0'; str++) {
-        while(!(USART1->ISR & USART_ISR_TXE)) {}
-
-        SysTick_CTRL_COUNTFLAG_Msk;
-
-        USART1->TDR = *str; 
+    for (; *str != '\0'; str++) {               // проходимся по строке, пока не дойдем до терминального
+        while(!(USART1->ISR&USART_ISR_TXE)) {}  // дожидаемся, пока USART не отправит предыдущий байт и выставит флаг готовности
+        USART1->TDR = *str;                     // загружаем очередной байт данных для отправки
     }
 }
 
-void TIM3CH3FreqInputInit () {
-    RCC->APB1ENR |= RCC_APB1ENR_TIM3EN;
+void TIM3CH1FreqInPinputInit () {
+    RCC->APB1ENR |= RCC_APB1ENR_TIM3EN;         // включаем тактирование на TIM3
 
-    TIM3->CCMR1 |= TIM_CCMR1_CC1S_0;
-    TIM3->CCER |= TIM_CCER_CC3E;
-    TIM3->CCER |= TIM_CCER_CC3P;
-    TIM3->DIER |= TIM_DIER_CC3IE;
+    TIM3->CCMR1 |= TIM_CCMR1_CC1S_0;            // настраиваем канал как входной, от которого происходит тактирование
+    TIM3->CCER  |= TIM_CCER_CC1E;               // включаем первый канал таймера
+    TIM3->CCER  |= TIM_CCER_CC1P;               // включаем режим внешенего тактирования
+    TIM3->DIER  |= TIM_DIER_CC1IE;              // включаем генерацию прерываний по событиям первого канала
+    TIM3->CCMR1 |= TIM_CCMR1_IC1PSC;            // устанавливаем предделитель 8 для таймерв
 
-    NVIC_EnableIRQ(TIM3_IRQn);
-    TIM3->CR1 |= TIM_CR1_CEN;
+    NVIC_EnableIRQ(TIM3_IRQn);                  // включаем прерывания по событиям TIM3
+    TIM3->CR1   |= TIM_CR1_CEN;                 // включаем счетчик таймера
 }
 
-extern "C" void TIM3_IRQHandler(void) {
-    static volatile uint16_t start = UINT16_MAX - TIM6->CNT;
-    
-    if (TIM3->SR & TIM_SR_CC3IF) {
-        volatile uint16_t current = UINT16_MAX - TIM6->CNT;
+extern "C" void TIM3_IRQHandler (void) {
+    if (TIM3->SR & TIM_SR_CC1IF) {              // проверяем, что флаг прерывания по первому каналу поднят 
+        static volatile uint16_t start = 0;     // храним время предыдущего вызова
+        volatile uint16_t current = TIM6->CNT;  // получаем текущее время по TIM6
+        measured = ApbFreq / (current - start); // обновляем время, так как и у TIM3 и у TIM6 стоит предделитель 8, то 8 сокращается 
 
-        measured = float(APBFreq) / (start - current);
-        
-        TIM3->SR &= ~TIM_SR_CC3IF;
+        TIM3->SR &= ~TIM_SR_CC1IF;              // опускаем флаг, прерывание обработано
 
-        start = current;
+        start = current;                        // обновляем время предыдущего вызова
     }
 }
 
