@@ -95,7 +95,7 @@ int main (void) {
             rate = val;
             break;
         case 1:
-            freq = val; 
+            freq = val * 100; 
             break;
         }
         
