@@ -117,7 +117,7 @@ void USART1ReciveInit (uint32_t baudRate) {
 
     USART1->BRR  = ApbFreq / baudRate;          // установили скорость прием-передачи в сек [бод]
     USART1->CR1 |= USART_CR1_RE;                // включаем прием
-    USART1->CR1 |= USART_CR1_UE;                // включаем usart
+    USART1->CR1 |= USART_CR1_UE;                // включаем USART
  
     NVIC_EnableIRQ(USART1_IRQn);                // включаем обратно прерывания
 } 
