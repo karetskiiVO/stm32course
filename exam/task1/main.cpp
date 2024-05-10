@@ -13,13 +13,13 @@
  * PB0  -> TIM3CH3  -- вывод PWM
  * PA10 -> USART1RX -- ввод USART
  * 
- * (c) Karetskii Vlad & Alisa Viktorove, MIPT 2024
+ * (c) Karetskii Vlad & Alisa Viktorova, MIPT 2024
  * 
  */
 
-const uint32_t PWMOUTpin  = 0;
-const uint32_t USARTINpin = 10;
-const uint32_t APBFreq    = 8'000'000;
+const uint32_t PwmOutPin  = 0;
+const uint32_t UsartInPin = 10;
+const uint32_t ApbFreq    = 8'000'000;
 
 enum class PinMode   : uint32_t { 
     INPUT       = 0b00, 
@@ -28,32 +28,19 @@ enum class PinMode   : uint32_t {
     ANALOG      = 0b11, 
 }; 
 enum class SpeedMode : uint32_t { 
-    LOW      = 0b00, 
-    FAST     = 0b01, 
-    VERYFAST = 0b10, 
+    LOW         = 0b00, 
+    FAST        = 0b01, 
+    VERYFAST    = 0b10, 
 }; 
 enum class PullMode  : uint32_t { 
-    NOPULL   = 0b00, 
-    PULLUP   = 0b01, 
-    PULLDOWN = 0b10, 
+    NOPULL      = 0b00, 
+    PULLUP      = 0b01, 
+    PULLDOWN    = 0b10, 
 }; 
- 
+
 void configurePin ( 
     GPIO_TypeDef* GPIOx, uint32_t pin, PinMode pinMode, 
-    SpeedMode speedMode, PullMode pullMode, uint32_t alternativeFunc) { 
-     
-    GPIOx->MODER &= ~(0b11 << (2 * pin));
-    GPIOx->MODER |= uint32_t(pinMode) << (2 * pin); 
- 
-    GPIOx->OSPEEDR &= ~(0b11 << (2 * pin)); 
-    GPIOx->OSPEEDR |= uint32_t(speedMode) << (2 * pin); 
- 
-    GPIOx->PUPDR &= ~(0b11 << (2 * pin)); 
-    GPIOx->PUPDR |= uint32_t(pullMode) << (2 * pin); 
- 
-    GPIOx->AFR[pin / 8] &= ~(0x0ful << ((pin % 8ul) * 4ul)); 
-    GPIOx->AFR[pin / 8] |= uint32_t(alternativeFunc & 0x0ful) << ((pin % 8ul) * 4ul);  
-}
+    SpeedMode speedMode, PullMode pullMode, uint32_t alternativeFunc);
 
 void TIM3CH3PWMInit ();
 void TIM3CH3PWMConfigure (uint32_t freq, uint8_t rate);
@@ -72,8 +59,8 @@ int main (void) {
     ** PB0  -> TIM3CH3
     ** PA10 -> USART1RX
     */
-    configurePin(GPIOB, PWMOUTpin,  PinMode::ALTERNATIVE, SpeedMode::LOW, PullMode::NOPULL, 1);
-    configurePin(GPIOA, USARTINpin, PinMode::ALTERNATIVE, SpeedMode::LOW, PullMode::NOPULL, 1);
+    configurePin(GPIOB, PwmOutPin,  PinMode::ALTERNATIVE, SpeedMode::LOW, PullMode::NOPULL, 1);
+    configurePin(GPIOA, UsartInPin, PinMode::ALTERNATIVE, SpeedMode::LOW, PullMode::NOPULL, 1);
 
     uint32_t freq = 0, rate = 0;                // переменные текущей частоты и скважности 
 
@@ -105,13 +92,30 @@ int main (void) {
     return 0;
 }
 
+void configurePin ( 
+    GPIO_TypeDef* GPIOx, uint32_t pin, PinMode pinMode, 
+    SpeedMode speedMode, PullMode pullMode, uint32_t alternativeFunc) { 
+     
+    GPIOx->MODER &= ~(0b11 << (2 * pin));
+    GPIOx->MODER |= uint32_t(pinMode) << (2 * pin); 
+ 
+    GPIOx->OSPEEDR &= ~(0b11 << (2 * pin)); 
+    GPIOx->OSPEEDR |= uint32_t(speedMode) << (2 * pin); 
+ 
+    GPIOx->PUPDR &= ~(0b11 << (2 * pin)); 
+    GPIOx->PUPDR |= uint32_t(pullMode) << (2 * pin); 
+ 
+    GPIOx->AFR[pin / 8] &= ~(0x0ful << ((pin % 8ul) * 4ul)); 
+    GPIOx->AFR[pin / 8] |= uint32_t(alternativeFunc & 0x0ful) << ((pin % 8ul) * 4ul);  
+}
+
 void USART1ReciveInit (uint32_t baudRate) { 
     RCC->APB2ENR |= RCC_APB2ENR_USART1EN;       // включаем тактирование для USART1
  
     NVIC_DisableIRQ(USART1_IRQn);               // выключаем на время настройки, для избежаний deadlock'ов
     
 
-    USART1->BRR  = APBFreq / baudRate;          // установили скорость прием-передачи в сек [бод]
+    USART1->BRR  = ApbFreq / baudRate;          // установили скорость прием-передачи в сек [бод]
     USART1->CR1 |= USART_CR1_RE;                // включаем прием
     USART1->CR1 |= USART_CR1_UE;                // включаем usart
  
@@ -133,6 +137,6 @@ void TIM3CH3PWMConfigure (uint32_t freq, uint8_t rate) {
         freq = 1;
     }
 
-    TIM3->PSC = (APBFreq / 256) / freq - 1;     // устанавлмваем прескейлер, для получения искомой частоты
+    TIM3->PSC = (ApbFreq / 256) / freq - 1;     // устанавлмваем прескейлер, для получения искомой частоты
     TIM3->CCR3 = 255 - rate;                    // устанавливаем скважность в третьем канале
 }
