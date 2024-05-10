@@ -48,12 +48,12 @@ void USARTDevice::attachPinsToUSART (const Pin& rx, const Pin& tx) {
     if (rx != Pin::Unavailable) {
         Pin::AFType af = Pin::AFType::NO;
 
-        if (tx == PA3)  af = Pin::AFType::AF1;
-        if (tx == PA10) af = Pin::AFType::AF1;
-        if (tx == PA15) af = Pin::AFType::AF1;
-        if (tx == PB7)  af = Pin::AFType::AF0;
+        if (rx == PA3)  af = Pin::AFType::AF1;
+        if (rx == PA10) af = Pin::AFType::AF1;
+        if (rx == PA15) af = Pin::AFType::AF1;
+        if (rx == PB7)  af = Pin::AFType::AF0;
 
-        tx.configure(Pin::PinMode::ALTERNATE, Pin::PullType::NO, Pin::SpeedType::LOW, af);
+        rx.configure(Pin::PinMode::ALTERNATE, Pin::PullType::NO, Pin::SpeedType::LOW, af);
     }
 }
 
@@ -76,18 +76,10 @@ void USARTDevice::setBaudRate (uint32_t baudRate) {
 }
 
 void USARTDevice::tick (uint32_t flags) {
-    auto& Led = st32::PC8;
-    static uint8_t u = 1;
-
-    Led.digitalWrite(u);
-    u = !u;
-    
     NVIC_DisableIRQ(usartIRQ);
     
     if (flags & USART_ISR_TXE) {
-        if (outbuffer.size() == 0) {
-            readyToTransmit = true;
-        } else {
+        if (outbuffer.size() != 0) {
             switch (outbuffer.front().type) {
             case USARTDevice::USARTTask::Type::SINGLE:
                 USARTx->TDR  = reinterpret_cast<const uint32_t>(outbuffer.front().begin); 
@@ -108,11 +100,17 @@ void USARTDevice::tick (uint32_t flags) {
                 break;
             }
         }
+
+        if (outbuffer.size() == 0) {
+            readyToTransmit = true;
+        }
     }
     
     if (flags & USART_ISR_RXNE) {
-        inbuffer.push(USARTx->RDR);
-        (void)USARTx->RDR;
+        uint8_t byte = USARTx->RDR; 
+        USARTx->ISR &= ~USART_ISR_RXNE;
+
+        inbuffer.push(byte);
         USARTx->CR1 |= USART_CR1_RXNEIE;
     }
 

@@ -18,7 +18,6 @@ const uint32_t EOR = -1;
 
 class USARTDevice {
     USART_TypeDef* USARTx;
-    uint32_t       baudRate;
     IRQn_Type      usartIRQ;
 
     Pin            rx = Pin::Unavailable;
@@ -38,8 +37,8 @@ class USARTDevice {
         const uint8_t* end;
     };
 
-    FIFObuffer<USARTTask, 64> outbuffer;
-    FIFObuffer<uint8_t, 128> inbuffer;
+    FIFObuffer<USARTTask, 32> outbuffer;
+    FIFObuffer<uint8_t, 64> inbuffer;
 
     USARTDevice (USART_TypeDef* USARTx, IRQn_Type usartIRQ);
 
@@ -52,7 +51,8 @@ public:
     USARTDevice& operator= (USARTDevice&&)      = delete;
     USARTDevice& operator= (const USARTDevice&) = delete;
 
-    void setBaudRate (uint32_t baudRate); 
+    void setBaudRate (uint32_t baudRate);
+
     void attachPinsToUSART (const Pin& rx, const Pin& tx);
 
     void send (uint8_t byte);
