@@ -2,6 +2,10 @@
 #include <system.h>
 #include <usb_hid.h>
 
+#include <stm32l1xx.h>
+#include <stm32l152xc.h>
+#include <system_stm32l1xx.h>
+
 namespace stm32 {
 
 #define INTR_NUM 1
@@ -280,16 +284,17 @@ struct {
     .y = 1000,
 };
 
+
 void usb_class_poll () {
     report_kbd.lshift = 1;
     report_kbd.keys[0] = 0x06;
     report_kbd.keys[1] = 0x12;
     report_kbd.keys[2] = 0x0E;
     report_kbd.keys[3] = 0x13;
-    //usb_ep_write(INTR_NUM | 0x80, (const uint16_t*)&report_kbd, sizeof(report_kbd));
+    usb_ep_write(INTR_NUM | 0x80, (const uint16_t*)&report_kbd, sizeof(report_kbd));
     delayms(8);
     report_kbd.modifiers = report_kbd.keys[0] = report_kbd.keys[1] = report_kbd.keys[2] = report_kbd.keys[3] = 0;
     
-    //usb_ep_write(INTR_NUM | 0x80, (const uint16_t*)&report_kbd, sizeof(report_kbd));
+    usb_ep_write(INTR_NUM | 0x80, (const uint16_t*)&report_kbd, sizeof(report_kbd));
 }
 }

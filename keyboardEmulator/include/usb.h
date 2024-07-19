@@ -5,6 +5,9 @@
 #include <stm32l152xc.h>
 #include <system_stm32l1xx.h>
 
+void _usb_ep_write (uint8_t idx, const uint16_t* buf, uint16_t size);
+int _usb_ep_read (uint8_t idx, uint16_t* buf);
+
 namespace stm32 {
 
 #define USB_EP0_BUFSZ   8
@@ -29,10 +32,10 @@ struct config_pack_t {
 void USB_setup ();
 void usb_ep_init (uint8_t epnum, uint8_t ep_type, uint16_t size, epfunc_t func);
 void usb_ep_init_double (uint8_t epnum, uint8_t ep_type, uint16_t size, epfunc_t func);
-static void usb_ep_write (uint8_t epnum, const uint16_t *buf, uint16_t size);
-static void usb_ep_write_double (uint8_t epnum, const uint16_t *buf, uint16_t size);
-static int usb_ep_read (uint8_t epnum, uint16_t *buf);
-static int usb_ep_read_double (uint8_t epnum, uint16_t *buf);
+void usb_ep_write (uint8_t epnum, const uint16_t *buf, uint16_t size);
+void usb_ep_write_double (uint8_t epnum, const uint16_t *buf, uint16_t size);
+int usb_ep_read (uint8_t epnum, uint16_t *buf);
+int usb_ep_read_double (uint8_t epnum, uint16_t *buf);
 #define usb_ep_ready (epnum)
 
 //usb_class_get_std_descr (required!)
@@ -157,29 +160,6 @@ USB_ALIGN static const struct name##_t {                                        
 #define wTOTALLENGTH 0,0
 
 #define ENDP_TOG(num, tog) do{USB_EPx(num) = ((USB_EPx(num) & ~(USB_EP_DTOG_RX | USB_EP_DTOG_TX | USB_EPRX_STAT | USB_EPTX_STAT)) | USB_EP_CTR_RX | USB_EP_CTR_TX) | tog; }while(0)
-
-void _usb_ep_write (uint8_t idx, const uint16_t* buf, uint16_t size);
-static inline void usb_ep_write (uint8_t epnum, const uint16_t* buf, uint16_t size) {
-    _usb_ep_write((epnum & 0x0F) * 2, buf, size);
-}
-
-static inline void usb_ep_write_double (uint8_t epnum, const uint16_t* buf, uint16_t size) {
-    epnum &= 0x0F;
-    uint8_t idx = 2 * epnum + !!(USB_EPx(epnum) & USB_EP_DTOG_RX);
-    ENDP_TOG(epnum, USB_EP_DTOG_RX);
-    _usb_ep_write(idx, buf, size);
-}
-
-int _usb_ep_read (uint8_t idx, uint16_t* buf);
-static inline int usb_ep_read (uint8_t epnum, uint16_t* buf) {
-    return _usb_ep_read((epnum & 0x0F)*2 + 1, buf);
-}
-static inline int usb_ep_read_double (uint8_t epnum, uint16_t *buf) {
-    uint8_t idx = !(USB_EPx(epnum) & USB_EP_DTOG_RX);
-    int res = _usb_ep_read((epnum & 0x0F)*2 + idx, buf);
-    ENDP_TOG( (epnum & 0x0F), USB_EP_DTOG_TX );
-    return res;
-}
 
 }
 #endif // usb.h

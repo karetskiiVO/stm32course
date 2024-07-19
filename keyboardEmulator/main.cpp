@@ -1,5 +1,7 @@
 #include <system.h>
+
 #include <usb.h>
+#include <usb_hid.h>
 
 const uint32_t Led = 6;
 
@@ -19,7 +21,7 @@ int main () {
 
     while (1) {
         usb_class_poll();
-        delayms(1);
+        delayms(8);
     }
 
     return 0;

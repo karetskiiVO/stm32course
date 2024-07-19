@@ -13,12 +13,32 @@ namespace stm32 {
 #define ENDP_CTR_RX_CLR(num) do{USB_EPx(num) = ((USB_EPx(num) & ~(USB_EP_DTOG_RX | USB_EP_DTOG_TX | USB_EPRX_STAT | USB_EPTX_STAT | USB_EP_CTR_RX)) | USB_EP_CTR_TX); }while(0)
 #define ENDP_CTR_TX_CLR(num) do{USB_EPx(num) = ((USB_EPx(num) & ~(USB_EP_DTOG_RX | USB_EP_DTOG_TX | USB_EPRX_STAT | USB_EPTX_STAT | USB_EP_CTR_TX)) | USB_EP_CTR_RX); }while(0)
 
+inline void usb_ep_write (uint8_t epnum, const uint16_t* buf, uint16_t size) {
+    _usb_ep_write((epnum & 0x0F) * 2, buf, size);
+}
+inline void usb_ep_write_double (uint8_t epnum, const uint16_t* buf, uint16_t size) {
+    epnum &= 0x0F;
+    uint8_t idx = 2 * epnum + !!(USB_EPx(epnum) & USB_EP_DTOG_RX);
+    ENDP_TOG(epnum, USB_EP_DTOG_RX);
+    _usb_ep_write(idx, buf, size);
+}
+
+inline int usb_ep_read (uint8_t epnum, uint16_t* buf) {
+    return _usb_ep_read((epnum & 0x0F)*2 + 1, buf);
+}
+inline int usb_ep_read_double (uint8_t epnum, uint16_t *buf) {
+    uint8_t idx = !(USB_EPx(epnum) & USB_EP_DTOG_RX);
+    int res = _usb_ep_read((epnum & 0x0F)*2 + idx, buf);
+    ENDP_TOG((epnum & 0x0F), USB_EP_DTOG_TX);
+    return res;
+}
+
 #define STM32ENDPOINTS (8)
 #define usb_epdata   ((volatile usb_epdata_t*)(USB_PMAADDR))
 #define LASTADDR_DEFAULT                (STM32ENDPOINTS * 8)
 
-__attribute__((weak))void usb_class_init       () { GPIOB->ODR |= 1 << 6; }
-__attribute__((weak))void usb_class_disconnect () { GPIOB->ODR &= ~(1 << 6); }
+__attribute__((weak))void usb_class_init       () {}
+__attribute__((weak))void usb_class_disconnect () {}
 __attribute__((weak))void usb_class_poll       () {}
 __attribute__((weak))void usb_class_sof        () {}
 __attribute__((weak))char usb_class_ep0_in     (config_pack_t *req, void **data, uint16_t *size)       { return 0; }
