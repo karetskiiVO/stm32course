@@ -286,10 +286,10 @@ void usb_class_poll () {
     report_kbd.keys[1] = 0x12;
     report_kbd.keys[2] = 0x0E;
     report_kbd.keys[3] = 0x13;
-    usb_ep_write(INTR_NUM | 0x80, (const uint16_t*)&report_kbd, sizeof(report_kbd));
+    //usb_ep_write(INTR_NUM | 0x80, (const uint16_t*)&report_kbd, sizeof(report_kbd));
     delayms(8);
     report_kbd.modifiers = report_kbd.keys[0] = report_kbd.keys[1] = report_kbd.keys[2] = report_kbd.keys[3] = 0;
     
-    usb_ep_write(INTR_NUM | 0x80, (const uint16_t*)&report_kbd, sizeof(report_kbd));
+    //usb_ep_write(INTR_NUM | 0x80, (const uint16_t*)&report_kbd, sizeof(report_kbd));
 }
 }
