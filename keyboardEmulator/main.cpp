@@ -20,8 +20,9 @@ int main () {
     // USB_ADDR0
 
     while (1) {
+        
         usb_class_poll();
-        delayms(8);
+        delayms(1);
     }
 
     return 0;

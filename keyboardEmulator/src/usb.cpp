@@ -13,20 +13,20 @@ namespace stm32 {
 #define ENDP_CTR_RX_CLR(num) do{USB_EPx(num) = ((USB_EPx(num) & ~(USB_EP_DTOG_RX | USB_EP_DTOG_TX | USB_EPRX_STAT | USB_EPTX_STAT | USB_EP_CTR_RX)) | USB_EP_CTR_TX); }while(0)
 #define ENDP_CTR_TX_CLR(num) do{USB_EPx(num) = ((USB_EPx(num) & ~(USB_EP_DTOG_RX | USB_EP_DTOG_TX | USB_EPRX_STAT | USB_EPTX_STAT | USB_EP_CTR_TX)) | USB_EP_CTR_RX); }while(0)
 
-inline void usb_ep_write (uint8_t epnum, const uint16_t* buf, uint16_t size) {
+void usb_ep_write (uint8_t epnum, const uint16_t* buf, uint16_t size) {
     _usb_ep_write((epnum & 0x0F) * 2, buf, size);
 }
-inline void usb_ep_write_double (uint8_t epnum, const uint16_t* buf, uint16_t size) {
+void usb_ep_write_double (uint8_t epnum, const uint16_t* buf, uint16_t size) {
     epnum &= 0x0F;
     uint8_t idx = 2 * epnum + !!(USB_EPx(epnum) & USB_EP_DTOG_RX);
     ENDP_TOG(epnum, USB_EP_DTOG_RX);
     _usb_ep_write(idx, buf, size);
 }
 
-inline int usb_ep_read (uint8_t epnum, uint16_t* buf) {
+int usb_ep_read (uint8_t epnum, uint16_t* buf) {
     return _usb_ep_read((epnum & 0x0F)*2 + 1, buf);
 }
-inline int usb_ep_read_double (uint8_t epnum, uint16_t *buf) {
+int usb_ep_read_double (uint8_t epnum, uint16_t *buf) {
     uint8_t idx = !(USB_EPx(epnum) & USB_EP_DTOG_RX);
     int res = _usb_ep_read((epnum & 0x0F)*2 + idx, buf);
     ENDP_TOG((epnum & 0x0F), USB_EP_DTOG_TX);
@@ -295,13 +295,16 @@ void usb_ep_init_double(uint8_t epnum, uint8_t ep_type, uint16_t size, epfunc_t 
     lastaddr += 2*size;
 }
 
-void USB_LP_IRQHandler () {
-    using stm32::usb_class_init;
-    using stm32::usb_class_disconnect;
-    using stm32::usb_class_poll;
-    using stm32::usb_class_sof;
-    using stm32::usb_class_ep0_in;
-    using stm32::usb_class_ep0_out;
+}
+/*
+void USB_LP_IRQHandler (void) {
+    using namespace stm32;
+    // using stm32::usb_class_init;
+    // using stm32::usb_class_disconnect;
+    // using stm32::usb_class_poll;
+    // using stm32::usb_class_sof;
+    // using stm32::usb_class_ep0_in;
+    // using stm32::usb_class_ep0_out;
 
     if (USB->ISTR & USB_ISTR_CTR) {
         do {
@@ -359,5 +362,8 @@ void USB_LP_IRQHandler () {
         USB->ISTR = (uint16_t)~USB_ISTR_WKUP;
     }
 }
+*/
 
+extern "C" void USB_LP_IRQHandler () {
+    GPIOB->ODR |= 1 << 6; // не заходит в прерывание
 }
